@@ -26,9 +26,10 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     projector_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY(user_id) REFERENCES users(id),
-    FOREIGN KEY(projector_id) REFERENCES projectors(id)
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (projector_id) REFERENCES projectors(id) ON DELETE CASCADE
   )`);
 });
 

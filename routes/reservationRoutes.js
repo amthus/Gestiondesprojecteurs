@@ -1,13 +1,9 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const reservationController = require("../src/controllers/reservationController");
 
-router.get('/', (req, res) => {
-  res.send('Liste des réservations');
-});
-
-router.post("/book", reservationController.bookProjector);
-router.get("/user/:user_id", reservationController.getUserReservations);
+router.post("/", reservationController.addReservation);
+router.get("/", reservationController.getAllReservations);
+router.delete("/:id", reservationController.deleteReservation);
 
 module.exports = router;
-

@@ -9,7 +9,7 @@ const { authMiddleware } = require("../src/middlewares/authMiddleware");
 router.get("/", authMiddleware, projectorController.getAllProjectors);
 
 // Route pour ajouter un projecteur 
-router.post("/add", authMiddleware, projectorController.addProjector);
+router.post("/", authMiddleware, projectorController.addProjector);
 
 // Route pour supprimer un projecteur
 router.delete("/:id", authMiddleware, projectorController.deleteProjector);
