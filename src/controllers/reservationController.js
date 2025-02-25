@@ -39,11 +39,11 @@ exports.addReservation = async (req, res) => {
   }
 
   try {
-    // Vérifier si le créneau est disponible
-    const isAvailable = await Reservation.isTimeSlotAvailable(projector_id, start_time, end_time);
-    if (!isAvailable) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: MESSAGES.TIME_CONFLICT });
-    }
+    // Vérifier si le créneau est disponible 
+    const isAvailable = await Reservation.isTimeSlotAvailable(projector_id, start_time, end_time); 
+    if (!isAvailable) { 
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: MESSAGES.TIME_CONFLICT }); 
+    } 
 
     // Créer la réservation
     const reservation = await Reservation.create(user_id, projector_id, start_time, end_time);

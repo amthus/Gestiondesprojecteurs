@@ -5,13 +5,22 @@ const userRoutes = require("./routes/userRoutes");
 const projectorRoutes = require("./routes/projectorRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 
+const { authMiddleware } = require("./src/middlewares/authMiddleware");
+
 const app = express();
 app.use(express.json());
 
 // Definir une route pour URL
-app.get('/', (req, res) => {
-    res.send('Bienvenue sur l\'API!');
+app.get("/", (req, res) => {
+  res.send("Bienvenue sur l'API!");
+});
+
+app.get("/profile", authMiddleware, (req, res) => {
+  res.json({
+    message: "Profil utilisateur",
+    user: req.user,
   });
+});
 
 app.use("/users", userRoutes);
 app.use("/projectors", projectorRoutes);
