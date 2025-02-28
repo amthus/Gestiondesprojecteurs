@@ -1,11 +1,10 @@
-
 const express = require('express'); // Framework pour gérer les routes
 const {
   createReservationHandler,
   getReservationsHandler,
   deleteReservationHandler,
-} = require('../controllers/reservationController'); // Importe les fonctions du contrôleur
-const authMiddleware = require('../middlewares/authMiddleware'); // Middleware d'authentification (à compléter par l'étudiant 3)
+} = require('../src/controllers/reservationController'); // Importe les fonctions du contrôleur
+const authMiddleware = require('../src/middlewares/authMiddleware'); // Middleware d'authentification (à compléter par l'étudiant 3)
 const router = express.Router(); // Crée un routeur Express
 
 // Route pour créer une réservation (protégée)

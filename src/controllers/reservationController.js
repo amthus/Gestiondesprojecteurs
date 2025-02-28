@@ -5,8 +5,7 @@ const {
   deleteReservation,
   updateProjectorStatus,
   checkAvailability,
-} = require('../models/reservationModel'); // Importe les fonctions du modèle
-
+} = require('../models/reservationModel');
 
 const STATUS_CODES = {
   SUCCESS: 200,
@@ -16,91 +15,94 @@ const STATUS_CODES = {
   SERVER_ERROR: 500,
 };
 
+// Function for send error
+const sendServerError = (res) => {
+   res.status(STATUS_CODES.SERVER_ERROR).json({ message: 'Erreur serveur' });
+}
 
 // Crée une nouvelle réservation
 const createReservationHandler = (req, res) => {
   try {
-    const { userId, projectorId, startTime, endTime } = req.body; // Récupère les données de la requête
+      const { userId, projectorId, startTime, endTime } = req.body;
 
-    // Vérifie que tous les champs nécessaires sont présents
-    if (!userId || !projectorId || !startTime || !endTime) {
-      return res.status(400).json({ message: 'Tous les champs sont requis' });
-    }
-
-    // Vérifie si le créneau est disponible
-    checkAvailability(projectorId, startTime, endTime, (err, conflict) => {
-      if (err) {
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      if (conflict) {
-        return res.status(400).json({ message: 'Créneau déjà réservé' });
+      if (!userId || !projectorId || !startTime || !endTime) {
+          return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Tous les champs sont requis' });
       }
 
-      // Crée la réservation dans la base de données
-      createReservation(userId, projectorId, startTime, endTime, (err) => {
-        if (err) {
-          return res.status(500).json({ message: 'Erreur lors de la réservation' });
-        }
-        // Met à jour le statut du projecteur à 'occupe'
-        updateProjectorStatus(projectorId, 'occupe', (err) => {
+      checkAvailability(projectorId, startTime, endTime, (err, conflict) => {
           if (err) {
-            return res.status(500).json({ message: 'Erreur lors de la mise à jour du statut' });
+              return sendServerError(res);
           }
-          res.status(201).json({ message: 'Réservation effectuée' });
-        });
+          if (conflict) {
+              return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Créneau déjà réservé' });
+          }
+
+          createReservation(userId, projectorId, startTime, endTime, (err) => {
+              if (err) {
+                  return sendServerError(res);
+              }
+              updateProjectorStatus(projectorId, 'occupe', (err, updated) => {
+                  if (err) {
+                      return sendServerError(res);
+                  }
+                  if(!updated){
+                      return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'Projecteur non trouvé' });
+                  }
+                  res.status(STATUS_CODES.CREATED).json({ message: 'Réservation effectuée' });
+              });
+          });
       });
-    });
   } catch (error) {
-    console.error(error); // Log l'erreur pour le débogage
-    res.status(500).json({ message: 'Erreur serveur' });
+      console.error(error);
+      sendServerError(res);
   }
 };
 
 // Récupère la liste des réservations
 const getReservationsHandler = (req, res) => {
   try {
-    getReservations((err, reservations) => {
-      if (err) {
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      res.status(200).json(reservations); // Renvoie la liste des réservations
-    });
+      getReservations((err, reservations) => {
+          if (err) {
+              return sendServerError(res);
+          }
+          res.status(STATUS_CODES.SUCCESS).json(reservations);
+      });
   } catch (error) {
-    console.error(error); // Log l'erreur pour le débogage
-    res.status(500).json({ message: 'Erreur serveur' });
+      console.error(error);
+      sendServerError(res);
   }
 };
 
 // Annule une réservation
 const deleteReservationHandler = (req, res) => {
   try {
-    const { id } = req.params; // Récupère l'ID de la réservation depuis l'URL
+      const { id } = req.params;
 
-    // Recherche la réservation à supprimer
-    findReservationById(id, (err, reservation) => {
-      if (err || !reservation) {
-        return res.status(404).json({ message: 'Réservation non trouvée' });
-      }
-
-      const projectorId = reservation.projector_id; // Récupère l'ID du projecteur associé
-
-      // Supprime la réservation
-      deleteReservation(id, (err) => {
-        if (err) {
-          return res.status(500).json({ message: 'Erreur lors de l\'annulation' });
-        }
-        // Remet le projecteur à 'fonctionnel'
-        updateProjectorStatus(projectorId, 'fonctionnel', (err) => {
-          if (err) {
-            return res.status(500).json({ message: 'Erreur lors de la mise à jour du statut' });
+      findReservationById(id, (err, reservation) => {
+          if (err || !reservation) {
+              return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'Réservation non trouvée' });
           }
-          res.status(200).json({ message: 'Réservation annulée' });
-        });
+
+          const projectorId = reservation.projector_id;
+
+          deleteReservation(id, (err) => {
+              if (err) {
+                  return sendServerError(res);
+              }
+              updateProjectorStatus(projectorId, 'fonctionnel', (err, updated) => {
+                  if (err) {
+                      return sendServerError(res);
+                  }
+                  if(!updated){
+                      return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'Projecteur non trouvé' });
+                  }
+                  res.status(STATUS_CODES.SUCCESS).json({ message: 'Réservation annulée' });
+              });
+          });
       });
-    });
   } catch (error) {
-    console.error(error); // Log l'erreur pour le débogage
-    res.status(500).json({ message: 'Erreur serveur' });
+      console.error(error);
+      sendServerError(res);
   }
 };
 

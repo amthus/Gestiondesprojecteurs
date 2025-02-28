@@ -1,7 +1,8 @@
 
 const express = require('express'); // Framework pour gérer les routes
-const { register, login } = require('../controllers/userController'); // Importe les fonctions du contrôleur
+const { register, login } = require('../src/controllers/userController.js'); // Importe les fonctions du contrôleur
 const router = express.Router(); // Crée un routeur Express
+console.log(require.resolve('../src/controllers/userController'))
 
 // Route pour l'inscription (publique)
 router.post('/register', register);

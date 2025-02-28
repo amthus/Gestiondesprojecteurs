@@ -1,25 +1,17 @@
-
-
-const express = require('express'); // Framework pour gérer les routes
+const express = require('express');
+const router = express.Router();
 const {
   addProjector,
   getProjectors,
-  updateProjector,
+  updateProjectorController,
   deleteProjector,
-} = require('../controllers/projectorController'); // Importe les fonctions du contrôleur
-const authMiddleware = require('../middlewares/authMiddleware'); // Middleware d'authentification (à compléter par l'étudiant 3)
-const router = express.Router(); // Crée un routeur Express
+} = require('../src/controllers/projectorController');
+const authMiddleware = require('../src/middlewares/authMiddleware');
 
-// Route pour ajouter un projecteur (protégée)
+// Routes
 router.post('/', authMiddleware, addProjector);
-
-// Route pour lister les projecteurs disponibles (publique)
 router.get('/', getProjectors);
-
-// Route pour modifier un projecteur (protégée)
-router.put('/:id', authMiddleware, updateProjector);
-
-// Route pour supprimer un projecteur (protégée)
+router.put('/:id', authMiddleware, updateProjectorController);
 router.delete('/:id', authMiddleware, deleteProjector);
 
-module.exports = router; // Exporte le routeur
+module.exports = router;
