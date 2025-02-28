@@ -1,130 +1,90 @@
 
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const User = require("../models/userModel");
+const bcrypt = require('bcrypt'); // Bibliothèque pour hacher les mots de passe
+const jwt = require('jsonwebtoken'); // Bibliothèque pour générer des tokens JWT
+const { createUser, findUserByEmail } = require('../models/userModel'); // Importe les fonctions du modèle
 
-// Constantes pour les messages d'erreur et les codes de statut
-const ERROR_MESSAGES = {
-  INTERNAL_ERROR: "Une erreur interne est survenue",
-  USER_EXISTS: "Utilisateur déjà existant",
-  USER_NOT_FOUND: "Utilisateur non trouvé",
-  INVALID_PASSWORD: "Mot de passe incorrect",
-  INVALID_EMAIL: "Email invalide",
-  WEAK_PASSWORD: "Le mot de passe doit contenir au moins 8 caractères, dont une majuscule, une minuscule, un chiffre et un caractère spécial",
-  INVALID_ROLE:"Rôle invalide. Veuillez bien entré le role."
-};
+const JWT_SECRET = process.env.JWT_SECRET ;
 
+// Codes HTTP
 const STATUS_CODES = {
-  INTERNAL_ERROR: 500,
+  SUCCESS: 200,
+  CREATED: 201,
   BAD_REQUEST: 400,
   NOT_FOUND: 404,
-  UNAUTHORIZED: 401,
-  CREATED: 201,
-  SUCCESS: 200,
+  SERVER_ERROR: 500,
+  CONFLICT: 409, 
 };
 
-// Fonction pour valider l'email
-const validateEmail = (email) => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
-};
-
-// Fonction pour valider la force du mot de passe
-const validatePassword = (password) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return regex.test(password);
-};
-
-// Fonction pour valider le rôle
-const validateRole = (role) => {
-  const validRoles = ["etudiant", "enseignant", "admin"];
-  return validRoles.includes(role);
-};
-
-exports.register = async (req, res) => {
-  const { email, password, role } = req.body; 
-
+// Fonction pour gérer l'inscription d'un utilisateur
+const register = async (req, res) => {
   try {
-    // Validation des entrées
+    const { email, password, role } = req.body; // Récupère les données de la requête
+
+    // Vérifie que les champs obligatoires sont présents
     if (!email || !password) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: "Email et mot de passe sont obligatoires" });
+      return res.status(400).json({ message: 'Email et mot de passe requis' });
     }
 
-    if (!validateEmail(email)) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_EMAIL });
-    }
+    // Vérifie si l'email est déjà utilisé
+    findUserByEmail(email, async (err, user) => {
+      if (err) {
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+      if (user) {
+        return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+      }
 
-    if (!validatePassword(password)) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.WEAK_PASSWORD });
-    }
+      // Hache le mot de passe avec un facteur de 10
+      const hashedPassword = await bcrypt.hash(password, 10);
+      // Définit le rôle par défaut à 'etudiant' si non spécifié ou invalide
+      const userRole = role && ['etudiant', 'enseignant', 'admin'].includes(role) ? role : 'etudiant';
 
-    if (!validateRole(role)) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_ROLE });
-    }
-
-    // Vérifier si l'utilisateur existe déjà
-    const userExists = await new Promise((resolve, reject) => {
-      User.findByEmail(email, (err, user) => {
-        if (err) return reject(err);
-        resolve(!!user);
+      // Crée l'utilisateur dans la base de données
+      createUser(email, hashedPassword, userRole, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Erreur lors de l\'inscription' });
+        }
+        res.status(201).json({ message: 'Utilisateur inscrit avec succès' });
       });
     });
-
-    if (userExists) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.USER_EXISTS });
-    }
-
-    // Hachage du mot de passe
-    const hash = await bcrypt.hash(password, 10);
-
-    // Création de l'utilisateur
-    await new Promise((resolve, reject) => {
-      User.create(email, hash, role, (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    return res.status(STATUS_CODES.CREATED).json({ message: "Utilisateur créé avec succès" });
-  } catch (err) {
-    console.error(err);
-    return res.status(STATUS_CODES.INTERNAL_ERROR).json({ error: ERROR_MESSAGES.INTERNAL_ERROR });
+  } catch (error) {
+    console.error(error); // Log l'erreur pour le débogage
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
-
+// Fonction pour gérer la connexion d'un utilisateur
+const login = async (req, res) => {
   try {
-    // Validation des entrées
+    const { email, password } = req.body; // Récupère les données de la requête
+
+    // Vérifie que les champs obligatoires sont présents
     if (!email || !password) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ error: "Email et mot de passe sont obligatoires" });
+      return res.status(400).json({ message: 'Email et mot de passe requis' });
     }
 
-    // Recherche de l'utilisateur par email
-    const user = await new Promise((resolve, reject) => {
-      User.findByEmail(email, (err, user) => {
-        if (err) return reject(err);
-        resolve(user);
+    // Recherche l'utilisateur par email
+    findUserByEmail(email, async (err, user) => {
+      if (err || !user) {
+        return res.status(401).json({ message: 'Utilisateur non trouvé' });
+      }
+
+      // Compare le mot de passe fourni avec celui haché dans la base
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ message: 'Mot de passe incorrect' });
+      }
+
+      // Génère un token JWT avec les informations de l'utilisateur
+      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+        expiresIn: '1h', // Le token expire après 1 heure
       });
+      res.status(200).json({ token }); // Renvoie le token au client
     });
-
-    if (!user) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.USER_NOT_FOUND });
-    }
-
-    // Comparaison des mots de passe
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: ERROR_MESSAGES.INVALID_PASSWORD });
-    }
-
-    // Génération du token JWT
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    return res.status(STATUS_CODES.SUCCESS).json({ token });
-  } catch (err) {
-    console.error(err);
-    return res.status(STATUS_CODES.INTERNAL_ERROR).json({ error: ERROR_MESSAGES.INTERNAL_ERROR });
+  } catch (error) {
+    console.error(error); // Log l'erreur pour le débogage
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+module.exports = { register, login };
