@@ -37,7 +37,7 @@ const validatePassword = (password) => {
 
 // Fonction pour valider le rôle
 const validateRole = (role) => {
-  const validRoles = ["etudiant", "enseignant", "admin"];
+  const validRoles = ["user", "admin"];
   return validRoles.includes(role);
 };
 
