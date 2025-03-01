@@ -36,6 +36,8 @@ const validateName = (name) => {
   const nameRegex = /^[A-Za-z]/; 
   return typeof name === "string" && name.trim().length > 1 && nameRegex.test(name.trim());
 };
+
+//ajout de projecteurs
 exports.addProjector = (req, res) => {
   const { name, status } = req.body;
 
@@ -72,6 +74,8 @@ exports.addProjector = (req, res) => {
   });
 };
 
+//listes des projecteurs
+
 exports.getAllProjectors = (req, res) => {
   Projector.getAll((err, projectors) => {
     if (err) {
@@ -80,6 +84,9 @@ exports.getAllProjectors = (req, res) => {
     res.status(STATUS_CODES.SUCCESS).json(projectors);
   });
 };
+
+//mises a jour des projecteurs
+
 
 exports.updateProjectorStatus = (req, res) => {
   const { id } = req.params;
@@ -106,6 +113,9 @@ exports.updateProjectorStatus = (req, res) => {
     return res.status(STATUS_CODES.SUCCESS).json({ message: MESSAGES.PROJECTOR_UPDATED });
   });
 };
+
+
+//suppresions des projecteurs
 
 
 exports.deleteProjector = (req, res) => {
